@@ -2,10 +2,10 @@
 
 import cv2 as cv
 import numpy as np
-import sys
+import sys, time
+from picamera2 import Picamera2
 
-
-def read_camera_parameters(filepath = 'camera_parameters/intrinsic.dat'):
+def read_camera_parameters(filepath = 'qr_code_example_intrinsic.dat'):
 
     inf = open(filepath, 'r')
 
@@ -49,50 +49,57 @@ def get_qr_coords(cmtx, dist, points):
     else: return [], [], []
 
 
-def show_axes(cmtx, dist, in_source):
-    cap = cv.VideoCapture(in_source)
+def show_axes(cmtx, dist, img):
+    #cap = cv.VideoCapture(in_source)
 
     qr = cv.QRCodeDetector()
 
-    while True:
-        ret, img = cap.read()
-        if ret == False: break
+    #while True:
+    #ret, img = cap.read()
 
-        ret_qr, points = qr.detect(img)
+    if ret == False: break
 
-        if ret_qr:
-            axis_points, rvec, tvec = get_qr_coords(cmtx, dist, points)
+    ret_qr, points = qr.detect(img)
 
-            #BGR color format
-            colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0,0,0)]
+    if ret_qr:
+        axis_points, rvec, tvec = get_qr_coords(cmtx, dist, points)
 
-            #check axes points are projected to camera view.
-            if len(axis_points) > 0:
-                axis_points = axis_points.reshape((4,2))
+        #BGR color format
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0,0,0)]
 
-                origin = (int(axis_points[0][0]),int(axis_points[0][1]) )
+        #check axes points are projected to camera view.
+        if len(axis_points) > 0:
+            axis_points = axis_points.reshape((4,2))
 
-                for p, c in zip(axis_points[1:], colors[:3]):
-                    p = (int(p[0]), int(p[1]))
+            origin = (int(axis_points[0][0]),int(axis_points[0][1]) )
 
-                    #Sometimes qr detector will make a mistake and projected point will overflow integer value. We skip these cases. 
-                    if origin[0] > 5*img.shape[1] or origin[1] > 5*img.shape[1]:break
-                    if p[0] > 5*img.shape[1] or p[1] > 5*img.shape[1]:break
+            for p, c in zip(axis_points[1:], colors[:3]):
+                p = (int(p[0]), int(p[1]))
 
-                    cv.line(img, origin, p, c, 5)
+                #Sometimes qr detector will make a mistake and projected point will overflow integer value. We skip these cases. 
+                if origin[0] > 5*img.shape[1] or origin[1] > 5*img.shape[1]:break
+                if p[0] > 5*img.shape[1] or p[1] > 5*img.shape[1]:break
 
-        cv.imshow('frame', img)
+                cv.line(img, origin, p, c, 5)
 
-        k = cv.waitKey(20)
-        if k == 27: break #27 is ESC key.
+    cv.imshow('frame', img)
+
+    k = cv.waitKey(20)
+    if k == 27: break #27 is ESC key.
 
     cap.release()
     cv.destroyAllWindows()
 
 if __name__ == '__main__':
 
+    picam = Picamera2()
+    picam.create_preview_configuration({"format": "BGR888"})
+    picam.start(show_preview=True)
+    time.sleep(2)
+
+
     #read camera intrinsic parameters.
-    cmtx, dist = read_camera_parameters("qr_code_example_intrinsic.dat")
+    cmtx, dist = read_camera_parameters("picam_calib_data.npz")
 
     input_source = 'qr_code_example.mp4'
     if len(sys.argv) > 1:

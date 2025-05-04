@@ -3,7 +3,14 @@
 
 import numpy as np
 import cv2 as cv
-import glob
+import glob, time
+
+from picamera2 import Picamera2
+
+picam = Picamera2()
+picam.create_preview_configuration({"format": "BGR888"})
+picam.start(show_preview=True)
+time.sleep(2)
 
 # termination criteria
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -15,55 +22,55 @@ objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 images = glob.glob('*.jpg')
 
-# Open the default camera
-cam = cv.VideoCapture(0)
 
 # Get the default frame width and height
-frame_width = int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
+frame_width = 640#int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
+frame_height = 480# int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
 
 while True:
 
-    ret, frame = cam.read()
+    #ret, frame = cam.read()
+    frame = picam.capture_array()
+    
     #frame = cv.imread("calib_radial.jpg")
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    
     # Find the chess board corners
     ret, corners = cv.findChessboardCorners(gray, (5,7), None)
     # If found, add object points, image points (after refining them)
     if ret == True:
+        print("object detected")
         objpoints.append(objp)
         corners2 = cv.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
         imgpoints.append(corners2)
         # Draw and display the corners
-        img = frame
-        img_gray = gray
-        cv.drawChessboardCorners(frame, (5,7), corners2, ret)
-        cv.waitKey(500)
+        #img = frame
+        #img_gray = gray
+        cv.drawChessboardCorners(gray, (5,7), corners2, ret)
+    
+    cv.imshow('Camera', gray)
+    
+    time.sleep(0.5)
 
-    cv.imshow('Camera', frame)
-
-    # Press 'q' to exit the loop
-    if cv.waitKey(1) == ord('q'):
-        break
+    k = cv.waitKey(20)
+    if k == 27: break # 27 is ESC keyk
 
 # Release the capture and writer objects
-cam.release()
 cv.destroyAllWindows()
 
-ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, img_gray.shape[::-1], None, None)
-h,  w = img.shape[:2]
+ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+h,  w = gray.shape[:2]
 newcameramtx, roi = cv.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
-cv.imwrite('distorted.png', img)
+cv.imwrite('distorted.png', gray)
 
 # undistort
-dst = cv.undistort(img, mtx, dist, None, newcameramtx)
+dst = cv.undistort(gray, mtx, dist, None, newcameramtx)
 # crop the image
 x, y, w, h = roi
 dst = dst[y:y+h, x:x+w]
 cv.imwrite('calibresult.png', dst)
 
-np.savez("calib_data.npz", mtx=mtx, dist=dist, newcameramtx=newcameramtx)
+np.savez("picam_calib_data.npz", mtx=mtx, dist=dist, newcameramtx=newcameramtx, roi=roi)
 
-h,  w = img.shape[:2]
-newcameramtx, roi = cv.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
-dst = cv.undistort(img, mtx, dist, None, newcameramtx)
+ 
+  
