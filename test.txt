@@ -1,0 +1,35 @@
+import time
+from mpu6050 import mpu6050
+
+# Initialize MPU6050
+sensor = mpu6050(0x68)
+
+# Initial conditions
+position = [0.0, 0.0, 0.0]  # meters
+velocity = [0.0, 0.0, 0.0]  # m/s
+
+# Constants
+G_TO_MS2 = 9.81  # convert g to m/s²
+dt = 0.1  # time step in seconds (adjust as needed)
+
+def get_acceleration():
+    raw = sensor.get_accel_data()
+    return [raw['x'] * G_TO_MS2, raw['y'] * G_TO_MS2, raw['z'] * G_TO_MS2]
+
+def update_position(pos, vel, acc, dt):
+    new_vel = [vel[i] + acc[i] * dt for i in range(3)]
+    new_pos = [pos[i] + vel[i] * dt + 0.5 * acc[i] * dt ** 2 for i in range(3)]
+    return new_pos, new_vel
+
+# Main loop
+try:
+    while True:
+        acceleration = get_acceleration()
+        position, velocity = update_position(position, velocity, acceleration, dt)
+        
+        print(f"Pos (m): x={position[0]:.2f}, y={position[1]:.2f}, z={position[2]:.2f}")
+        
+        time.sleep(dt)
+
+except KeyboardInterrupt:
+    print("\nStopped.")
