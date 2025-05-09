@@ -4,7 +4,7 @@ Project for Computer Vision CS362V
 # Main idea
 Using the camera and a QR code anchor, we can estimate and record the camera's relative position in 3d space. The lens must be calibrated (rpi_camera_calibration.py), the position can be recorded (rpi_position.py), and then that telemety can be viewed in MATLAB (3d_viewer.m).
 
-![![Screenshot](https://github.com/jonahstricklin/position-tracking/matlab_output.png)]
+![Screenshot](https://github.com/jonahstricklin/position-tracking/matlab_output.png)
 
 After writing this entirely for the Pi, I decided to also show how it runs on my laptop with a USB webcam.
 
